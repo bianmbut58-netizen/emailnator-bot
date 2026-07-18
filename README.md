@@ -12,11 +12,10 @@ Dibangun di atas [Emailnator](https://www.emailnator.com) dengan Node.js.
 emailnator-bot/
 ├── bot.js                 # Entry point — bot Telegram
 ├── package.json           # Dependencies & scripts
-├── .env.example           # Contoh environment variables
 ├── .gitignore             # Ignore rules
 ├── README.md              # Dokumentasi (ini)
 ├── src/
-│   ├── config.js          # Konfigurasi terpusat
+│   ├── config.js          # 🔧 Konfigurasi — isi token bot di sini!
 │   └── emailnator.js      # Core class Emailnator
 └── examples/
     └── usage.js           # Contoh pemakaian tanpa bot
@@ -26,9 +25,10 @@ emailnator-bot/
 
 ## 🚀 Cara Install & Jalankan
 
-### 1. Clone / download project
+### 1. Clone project
 
 ```bash
+git clone https://github.com/bianmbut58-netizen/emailnator-bot.git
 cd emailnator-bot
 ```
 
@@ -38,19 +38,12 @@ cd emailnator-bot
 npm install
 ```
 
-### 3. Setup token bot
+### 3. Isi token bot
 
-Buat bot baru di Telegram lewat [@BotFather](https://t.me/BotFather), dapatkan token, lalu:
+Buka `src/config.js`, cari baris `botToken: ''`, isi dengan token dari [@BotFather](https://t.me/BotFather):
 
-```bash
-export BOT_TOKEN=1234567890:ABCdefGHIjklmNOPqrStuVWXyz
-```
-
-Atau salin `.env.example` jadi `.env` dan isi token-nya:
-
-```bash
-cp .env.example .env
-# lalu edit .env, isi BOT_TOKEN=...
+```js
+botToken: '1234567890:ABCdefGHIjklmNOPqrStuVWXyz',
 ```
 
 ### 4. Jalankan 🚀
@@ -96,16 +89,6 @@ const Emailnator = require('./src/emailnator');
 ```
 
 Jalankan: `npm test` atau `node examples/usage.js`
-
-### Konfigurasi
-
-Semua konfigurasi ada di `src/config.js`:
-
-| Field              | Default                                | Keterangan                  |
-| ------------------ | -------------------------------------- | --------------------------- |
-| `botToken`         | `process.env.BOT_TOKEN`                | Token bot Telegram           |
-| `emailnator.timeout` | `30000`                              | Timeout HTTP request (ms)   |
-| `messages.maxContentLength` | `3500`                   | Maks karakter baca pesan    |
 
 ---
 

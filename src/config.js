@@ -1,28 +1,30 @@
 /**
  * Emailnator Bot — Configuration
  *
- * Ubah nilai di bawah sesuai dengan kebutuhan kamu.
- * Jangan commit token asli ke git! Gunakan .env atau environment variable.
+ * 📌 Isi langsung token bot Telegram kamu di bawah ini.
+ * Jangan commit ke GitHub kalo token-nya asli! Simpan untuk local aja.
  */
 
 const config = {
   // Token bot Telegram — dapat dari @BotFather
-  botToken: process.env.BOT_TOKEN || '',
+  // Isi langsung di sini: botToken: '123456:ABCdef...'
+  botToken: '',
 
   // Opsi polling Telegram (optional)
   polling: {
-    interval: 300,      // ms antara polling request
+    interval: 300,
     autoStart: true,
     params: {
-      timeout: 30,       // long-polling timeout (detik)
+      timeout: 30,
     },
   },
 
   // Opsi HTTP client Emailnator
   emailnator: {
     baseURL: 'https://www.emailnator.com',
-    timeout: 30000,      // 30 detik timeout request
-    userAgent: 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/140.0.0.0 Mobile Safari/537.36',
+    timeout: 30000,
+    userAgent:
+      'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36 Chrome/140.0.0.0 Mobile Safari/537.36',
   },
 
   // Format pesan

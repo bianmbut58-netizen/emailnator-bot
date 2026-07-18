@@ -1,13 +1,12 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Emailnator = require('./src/emailnator');
 const config = require('./src/config');
-const cheerio = require('cheerio');
 
 // ===================== INIT =====================
 
 if (!config.botToken) {
-  console.error('❌ BOT_TOKEN tidak ditemukan!');
-  console.error('   Set environment variable BOT_TOKEN atau isi di src/config.js');
+  console.error('❌ Token bot belum diisi!');
+  console.error('   Buka src/config.js dan isi field botToken dengan token dari @BotFather');
   process.exit(1);
 }
 
@@ -31,7 +30,7 @@ function truncate(text, maxLen) {
   return text.slice(0, maxLen) + '\n\n...*(dipotong, terlalu panjang)*';
 }
 
-function formatInbox(chatId, inbox) {
+function formatInbox(inbox) {
   if (inbox.totalEmails === 0) return config.messages.emptyInbox;
   const lines = [`📬 *${inbox.totalEmails} pesan* di inbox:\n`];
   inbox.emails.forEach((m, i) => {
@@ -89,7 +88,7 @@ bot.onText(/^\/inbox$/, async (msg) => {
   try {
     const e = new Emailnator();
     const inbox = await e.getInbox(email);
-    await bot.editMessageText(`📧 *${email}*\n\n${formatInbox(chatId, inbox)}`, {
+    await bot.editMessageText(`📧 *${email}*\n\n${formatInbox(inbox)}`, {
       chat_id: chatId,
       message_id: status.message_id,
       parse_mode: 'Markdown',
@@ -136,6 +135,6 @@ bot.on('polling_error', (err) => {
 });
 
 console.log('🤖 Emailnator Bot is running...');
-console.log(`   Mode: polling`);
+console.log('   Mode: polling');
 
 module.exports = bot;
