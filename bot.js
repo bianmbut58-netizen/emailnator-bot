@@ -25,9 +25,22 @@ function setEmail(chatId, email) {
   userEmails.set(chatId, email);
 }
 
+/**
+ * Escape MarkdownV1 special characters in user-generated content
+ * so Telegram doesn't choke on them.
+ */
+function escMD(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/_/g, '\\_')
+    .replace(/\*/g, '\\*')
+    .replace(/`/g, '\\`')
+    .replace(/\[/g, '\\[');
+}
+
 function truncate(text, maxLen) {
-  if (!text || text.length <= maxLen) return text || '*(kosong)*';
-  return text.slice(0, maxLen) + '\n\n...*(dipotong, terlalu panjang)*';
+  if (!text || text.length <= maxLen) return escMD(text || '*(kosong)*');
+  return escMD(text.slice(0, maxLen)) + '\n\n...*(dipotong, terlalu panjang)*';
 }
 
 function formatInbox(inbox) {
@@ -35,8 +48,8 @@ function formatInbox(inbox) {
   const lines = [`📬 *${inbox.totalEmails} pesan* di inbox:\n`];
   inbox.emails.forEach((m, i) => {
     lines.push(
-      `${i + 1}. *${m.subject || '(no subject)'}*` +
-        `\n   Dari: ${m.from || '?'}` +
+      `${i + 1}. *${escMD(m.subject || '(no subject)')}*` +
+        `\n   Dari: ${escMD(m.from || '?')}` +
         `\n   /read_${m.id}`
     );
   });
@@ -49,14 +62,14 @@ bot.onText(/^\/start$/, async (msg) => {
   const chatId = msg.chat.id;
   await bot.sendMessage(
     chatId,
-    `Halo! 👋 Aku *Emailnator Bot*.\n\n` +
-      `Aku bisa bantu kamu bikin *email sementara* dan cek *inbox* langsung dari Telegram.\n\n` +
-      `📋 *Perintah:*\n` +
+    `<b>Halo! 👋 Aku Emailnator Bot.</b>\n\n` +
+      `Aku bisa bantu kamu bikin <b>email sementara</b> dan cek <b>inbox</b> langsung dari Telegram.\n\n` +
+      `<b>📋 Perintah:</b>\n` +
       `  /new — Buat email baru\n` +
       `  /inbox — Cek inbox email kamu\n` +
-      `  /read_\\<id\\> — Baca detail isi pesan\n\n` +
+      `  /read_id — Baca detail isi pesan (ganti <code>id</code> dengan ID pesan)\n\n` +
       `Coba /new dulu yuk! 🚀`,
-    { parse_mode: 'Markdown' }
+    { parse_mode: 'HTML' }
   );
 });
 
@@ -68,11 +81,11 @@ bot.onText(/^\/new$/, async (msg) => {
     const result = await e.create();
     setEmail(chatId, result.email);
     await bot.editMessageText(
-      `✅ *Email berhasil dibuat!*\n\n📧 \`${result.email}\`\n\nGunakan /inbox untuk cek pesan masuk.`,
-      { chat_id: chatId, message_id: status.message_id, parse_mode: 'Markdown' }
+      `✅ <b>Email berhasil dibuat!</b>\n\n📧 <code>${result.email}</code>\n\nGunakan /inbox untuk cek pesan masuk.`,
+      { chat_id: chatId, message_id: status.message_id, parse_mode: 'HTML' }
     );
   } catch (err) {
-    await bot.editMessageText(config.messages.error(err.message), {
+    await bot.editMessageText(`❌ Gagal: ${err.message}`, {
       chat_id: chatId,
       message_id: status.message_id,
     });
@@ -88,13 +101,13 @@ bot.onText(/^\/inbox$/, async (msg) => {
   try {
     const e = new Emailnator();
     const inbox = await e.getInbox(email);
-    await bot.editMessageText(`📧 *${email}*\n\n${formatInbox(inbox)}`, {
+    await bot.editMessageText(`📧 ${email}\n\n${formatInbox(inbox)}`, {
       chat_id: chatId,
       message_id: status.message_id,
       parse_mode: 'Markdown',
     });
   } catch (err) {
-    await bot.editMessageText(config.messages.error(err.message), {
+    await bot.editMessageText(`❌ Gagal cek inbox: ${err.message}`, {
       chat_id: chatId,
       message_id: status.message_id,
     });
@@ -113,15 +126,15 @@ bot.onText(/^\/read_(.+)$/, async (msg, match) => {
     const message = await e.getMessage(email, messageId);
     const content = truncate(message.text, config.messages.maxContentLength);
     await bot.editMessageText(
-      `📩 *Pesan*\n` +
-        `ID: \`${message.id}\`\n` +
-        `Dari: ${message.from}\n` +
-        `Subjek: ${message.subject}\n` +
-        `Waktu: ${message.time || '?'}\n\n${content}`,
-      { chat_id: chatId, message_id: status.message_id, parse_mode: 'Markdown' }
+      `<b>📩 Pesan</b>\n` +
+        `ID: <code>${message.id}</code>\n` +
+        `Dari: ${escMD(message.from)}\n` +
+        `Subjek: ${escMD(message.subject)}\n` +
+        `Waktu: ${escMD(message.time || '?')}\n\n${content}`,
+      { chat_id: chatId, message_id: status.message_id, parse_mode: 'HTML' }
     );
   } catch (err) {
-    await bot.editMessageText(config.messages.error(err.message), {
+    await bot.editMessageText(`❌ Gagal baca pesan: ${err.message}`, {
       chat_id: chatId,
       message_id: status.message_id,
     });
