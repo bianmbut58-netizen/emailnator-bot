@@ -22,7 +22,12 @@
     "axios": "^1.7.0",
     "axios-cookiejar-support": "^5.0.0",
     "cheerio": "^1.0.0",
+    "cloudscraper": "^4.6.0",
     "node-telegram-bot-api": "^0.66.0",
+    "playwright": "^1.61.1",
+    "puppeteer": "^25.3.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
     "tough-cookie": "^5.0.0"
   }
 }
