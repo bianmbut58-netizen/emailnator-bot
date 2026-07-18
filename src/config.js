@@ -8,7 +8,7 @@
 const config = {
   // Token bot Telegram — dapat dari @BotFather
   // Isi langsung di sini: botToken: '123456:ABCdef...'
-  botToken: '',
+  botToken: '8773654941:AAHUC8XECJpo1J24YxNt9kACo6DMbMBa-VE',
 
   // Opsi polling Telegram (optional)
   polling: {
