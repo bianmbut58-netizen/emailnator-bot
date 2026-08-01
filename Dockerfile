@@ -25,7 +25,12 @@ RUN mkdir -p /data
 
 # Install Node dependencies (package-lock.json keeps builds reproducible)
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev
+# --ignore-scripts: better-sqlite3 ships prebuilt binaries inside the npm
+# package (prebuilds/linux-x64.node). Without this flag npm auto-runs
+# `node-gyp rebuild` (because of binding.gyp), which fails on slim images
+# (no `make`). The bundled prebuild is used at runtime instead — verified
+# to load fine on Node 22.
+RUN npm ci --omit=dev --ignore-scripts
 
 # Install Python dependencies (cloudscraper).
 # --break-system-packages is required on Debian 12 (bookworm) for pip installs
