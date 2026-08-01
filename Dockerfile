@@ -11,8 +11,12 @@ RUN apt-get update \
 
 WORKDIR /app
 
-# Persistent storage directory (SQLite DB). Railway mounts a volume here —
-# see railway.toml comments. Local dev can override with DATA_DIR.
+# Persistent storage directory (SQLite DB) — same pattern as 9router-v3.
+# The app writes its database here, so when a Railway volume is attached at
+# /data (dashboard or `railway volume add --mount-path /data`) data survives
+# redeploys. NOTE: do NOT add `VOLUME /data` here — Railway BANS the VOLUME
+# keyword in Dockerfiles and the build will fail. Local dev can override
+# DATA_DIR (default: ./data).
 ENV DATA_DIR=/data
 RUN mkdir -p /data
 
