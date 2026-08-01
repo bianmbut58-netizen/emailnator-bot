@@ -6,3 +6,8 @@ node_modules
 npm-debug.log*
 dist
 .DS_Store
+
+data
+*.db
+*.db-wal
+*.db-shm

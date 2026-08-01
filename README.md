@@ -23,6 +23,7 @@ Dibangun di atas [Emailnator](https://www.emailnator.com) — **Node.js** untuk 
 | 📖 **Baca isi pesan** | Detail pesan: **Dari**, **Subjek**, **Waktu**, dan konten lengkap (di-extract otomatis dari HTML) |
 | 🔄 **Refresh inbox** | Tombol refresh tanpa mengetik ulang perintah |
 | 📋 **Multi-email** | Simpan banyak email & ganti-ganti kapan saja |
+| 💾 **Penyimpanan persisten** | SQLite (`better-sqlite3`) — daftar email **tidak hilang** saat restart/redeploy |
 | 🔘 **Kontrol via tombol** | Semua aksi pakai inline keyboard — tanpa hafal command |
 | 🧠 **Bypass Cloudflare** | Python `cloudscraper` menangani proteksi situs |
 | 🚀 **Siap deploy** | Dockerfile + railway.toml untuk auto-build di Railway |
@@ -74,6 +75,8 @@ botToken: '1234567890:ABCdefGHIjklmNOPqrStuVWXyz',
 ```
 
 > 🔒 `process.env.TELEGRAM_BOT_TOKEN` selalu diprioritaskan. Kalau env var terisi, token di `config.js` diabaikan.
+
+> 💾 **Penyimpanan email** otomatis tersimpan di SQLite (`./data/emailnator.db` secara lokal). Untuk mengubah lokasi, set env var `DATA_DIR` (contoh: `export DATA_DIR=/data`).
 
 ### 4. Jalankan 🎉
 
@@ -190,9 +193,10 @@ emailnator-bot/
 ├── .gitignore             # Ignore rules (node_modules, .env, dll)
 ├── README.md              # Dokumentasi (ini)
 ├── src/
-│   ├── config.js          # 🔧 Konfigurasi (token, polling, pesan)
+│   ├── config.js          # 🔧 Konfigurasi (token, polling, storage, pesan)
 │   ├── emailnator.js      # Core class Emailnator (create/inbox/read)
-│   └── emailnator.py      # 🐍 Bridge Python — bypass Cloudflare via cloudscraper
+│   ├── emailnator.py      # 🐍 Bridge Python — bypass Cloudflare via cloudscraper
+│   └── storage.js         # 💾 Penyimpanan persisten SQLite (users & emails)
 └── examples/
     └── usage.js           # Contoh pemakaian tanpa bot (npm test)
 ```
@@ -213,12 +217,21 @@ Project ini sudah dilengkapi **`Dockerfile` + `railway.toml`**, jadi Railway lan
    TELEGRAM_BOT_TOKEN = <token dari @BotFather>
    ```
 5. **Deploy** — bot langsung online. Log akan menunjukkan `🤖 Emailnator Bot is running...`
+6. *(Penting)* **Pasang Volume** supaya daftar email tersimpan permanen:
+   - Buka **Deployments → Service → Volumes** → **Add Volume** → mount path `/data`
+   - atau via CLI: `railway volume add --mount-path /data`
 
 ### Cara kerja config
 
-- **`Dockerfile`** — image `node:20-slim`, install `python3`/`python3-pip`, lalu `npm ci` + `pip install -r requirements.txt`. Perintah: `node bot.js`
-- **`railway.toml`** — `builder = "DOCKERFILE"`, `startCommand = "node bot.js"`, restart otomatis `ON_FAILURE` (max 10×), tanpa HTTP healthcheck (bot tidak punya web server)
+- **`Dockerfile`** — image `node:20-slim`, install `python3`/`python3-pip`, lalu `npm ci` + `pip install -r requirements.txt`. Perintah: `node bot.js`. Sudah set `ENV DATA_DIR=/data` + `mkdir /data`.
+- **`railway.toml`** — `builder = "DOCKERFILE"`, `startCommand = "node bot.js"`, restart otomatis `ON_FAILURE` (max 10×), tanpa HTTP healthcheck (bot tidak punya web server). **Catatan:** `railway.toml` tidak mendukung blok `[volumes]` — volume dipasang via dashboard/CLI (lihat langkah 6).
 - **Token TIDAK dideklarasikan di `railway.toml`** — karena variabel di toml *menimpa* variabel dashboard. Token harus di-set di tab Variables Railway.
+
+### 💾 Penyimpanan persisten di Railway
+
+- Bot menulis database SQLite ke **`/data`** (`DATA_DIR=/data`, sudah default di Dockerfile).
+- **Tanpa volume:** DB tersimpan di disk container yang **ephemeral** — hilang saat redeploy. **Dengan volume** (mount di `/data`): daftar email & email aktif tetap ada walau bot restart/redeploy.
+- Railway otomatis set `RAILWAY_VOLUME_<NAMA>_MOUNT_PATH` saat volume terpasang; karena bot sudah default ke `/data`, tidak perlu env tambahan.
 
 > 💡 Bot ini pakai **long-polling** (bukan webhook), jadi tidak perlu domain/port publik.
 
@@ -235,7 +248,7 @@ Project ini sudah dilengkapi **`Dockerfile` + `railway.toml`**, jadi Railway lan
 | Bot tidak menjawab, log `ETELEGRAM 409 Conflict` | Bot jalan di **2 proses sekaligus** (polling dobel) | Hentikan proses lama, jalankan hanya satu instance |
 | `ETELEGRAM 401 Unauthorized` | Token salah / sudah di-revoke | Ganti token di @BotFather & update `TELEGRAM_BOT_TOKEN` / `config.js` |
 | `❌ Token bot belum diisi!` lalu exit | `botToken` kosong di config & env var tidak ada | Set `TELEGRAM_BOT_TOKEN` atau isi `src/config.js` |
-| Daftar email hilang setelah restart | Data tersimpan **di memory** (`Map`), bukan database | Fitur desain — buat email lagi dengan `/new`. (Upgrade ke database dimungkinkan) |
+| Daftar email hilang setelah restart | ~~Data tersimpan di memory~~ → **sudah diperbaiki**: sekarang tersimpan di SQLite | Pastikan volume Railway terpasang di `/data` (lihat bagian Deploy) |
 | `Gagal cek inbox: ...` | Jaringan ke emailnator.com bermasalah | Cek koneksi & coba lagi |
 | `Unexpected response from Emailnator (no email returned)` | Respons situs berubah / bukan JSON | Update bot ke versi terbaru; laporkan issue |
 
@@ -267,6 +280,6 @@ Menjalankan `node examples/usage.js` — generate email sungguhan, cek inbox, la
 
 <div align="center">
 
-**💡 Tips:** Kalau botnya dipakai banyak orang, pertimbangkan memindahkan penyimpanan email dari memory ke database (misal SQLite/Postgres) supaya tidak hilang saat restart.
+**💡 Tips:** Daftar email sekarang tersimpan di SQLite (`/data` di Railway, `./data` lokal) — tidak hilang lagi saat restart. Jangan lupa pasang Volume di Railway biar data tetap ada saat redeploy.
 
 </div>

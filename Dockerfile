@@ -11,6 +11,11 @@ RUN apt-get update \
 
 WORKDIR /app
 
+# Persistent storage directory (SQLite DB). Railway mounts a volume here —
+# see railway.toml comments. Local dev can override with DATA_DIR.
+ENV DATA_DIR=/data
+RUN mkdir -p /data
+
 # Install Node dependencies (package-lock.json keeps builds reproducible)
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev

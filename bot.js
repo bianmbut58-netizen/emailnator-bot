@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 const Emailnator = require('./src/emailnator');
 const config = require('./src/config');
+const store = require('./src/storage');
 
 // ===================== INIT =====================
 
@@ -13,21 +14,19 @@ if (!config.botToken) {
 const bot = new TelegramBot(config.botToken, { polling: config.polling });
 
 /**
- * User storage:
- *   Map<chatId, { active: string, list: string[] }>
+ * User storage (persisten, SQLite — lihat src/storage.js):
+ *   { active: string, list: string[] }
  *
  *   - active: email yang sedang dipakai sekarang
  *   - list:   semua email yang pernah dibuat (termasuk active)
+ *
+ * Data disimpan di database, jadi tidak hilang saat bot restart.
  */
-const userStore = new Map();
 
 // ===================== HELPERS =====================
 
 function getUser(chatId) {
-  if (!userStore.has(chatId)) {
-    userStore.set(chatId, { active: null, list: [] });
-  }
-  return userStore.get(chatId);
+  return store.getUser(chatId);
 }
 
 function getActiveEmail(chatId) {
@@ -35,25 +34,16 @@ function getActiveEmail(chatId) {
 }
 
 function setActiveEmail(chatId, email) {
-  const u = getUser(chatId);
-  u.active = email;
-  if (!u.list.includes(email)) {
-    u.list.push(email);
-  }
+  store.setActive(chatId, email);
 }
 
 function pushNewEmail(chatId, email) {
   const u = getUser(chatId);
   if (u.active) {
-    // push old to list if not already there
-    if (!u.list.includes(u.active)) {
-      u.list.push(u.active);
-    }
+    // simpan email lama ke daftar kalau belum ada
+    store.addEmail(chatId, u.active);
   }
-  u.active = email;
-  if (!u.list.includes(email)) {
-    u.list.push(email);
-  }
+  store.setActive(chatId, email);
 }
 
 function escMD(text) {
@@ -417,7 +407,7 @@ bot.on('callback_query', async (query) => {
       });
     }
 
-    u.active = targetEmail;
+    store.setActive(chatId, targetEmail);
 
     await bot.editMessageText(
       `✅ <b>Berhasil ganti ke:</b>\n\n📧 <code>${targetEmail}</code>`,

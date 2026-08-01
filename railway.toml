@@ -15,3 +15,15 @@ restartPolicyMaxRetries = 10
 # NOTE: railway.toml variables OVERRIDE dashboard variables, so the token is
 # intentionally NOT declared here. Set it in Railway → Variables instead:
 #   TELEGRAM_BOT_TOKEN = "<token dari @BotFather>"
+
+# 💾 PERSISTENT STORAGE (SQLite)
+# The bot stores its email database at $DATA_DIR (default /data — set in the
+# Dockerfile). railway.toml does NOT support a [volumes] block, so attach a
+# volume in the Railway dashboard (Deployments → Service → Volumes) or via CLI:
+#
+#   railway volume add --mount-path /data
+#
+# After attaching, Railway auto-sets RAILWAY_VOLUME_<NAME>_MOUNT_PATH; the bot
+# already defaults DATA_DIR=/data, so no extra config is needed.
+# Without a volume the DB lives on the ephemeral container disk (reset on
+# redeploy) — attach the volume so email lists survive restarts.

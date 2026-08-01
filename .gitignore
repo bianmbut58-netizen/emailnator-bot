@@ -4,3 +4,10 @@ node_modules/
 dist/
 .DS_Store
 npm-debug.log*
+
+# Database lokal (SQLite) — jangan di-commit
+/data
+data/
+*.db
+*.db-wal
+*.db-shm
