@@ -1,7 +1,10 @@
 # syntax=docker/dockerfile:1
 
-# Node LTS base (Debian slim) — the bot is a Node.js app (node-telegram-bot-api)
-FROM node:20-slim
+# Node 22 LTS base (Debian slim) — required by better-sqlite3@13 (engines: node>=22).
+# Node 22 ships prebuilt binaries for better-sqlite3, so npm ci downloads them
+# instead of compiling with node-gyp (which needs make — not in slim images).
+# Node 20 is EOL (April 2026), so 22 also keeps the image supported.
+FROM node:22-slim
 
 # ...but it also shells out to Python (cloudscraper) to bypass Cloudflare,
 # so Python 3 + pip are required at runtime too (see src/emailnator.py)

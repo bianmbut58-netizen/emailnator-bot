@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "🤖 Telegram Bot untuk generate email sementara & cek inbox — powered by Emailnator",
   "main": "bot.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node bot.js",
     "dev": "node bot.js",

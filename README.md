@@ -4,7 +4,7 @@
 
 **Bot Telegram untuk generate email sementara (disposable email) & cek inbox langsung dari Telegram.**
 
-[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org)
 [![Python](https://img.shields.io/badge/Python-3-3776AB?logo=python&logoColor=white)](https://python.org)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -32,7 +32,7 @@ Dibangun di atas [Emailnator](https://www.emailnator.com) — **Node.js** untuk 
 
 ## ⚙️ Requirements
 
-- **Node.js ≥ 18** (uji coba di v22)
+- **Node.js ≥ 22** (wajib — `better-sqlite3@13` butuh Node ≥ 22; Node 20 sudah EOL)
 - **Python 3** + `pip`
 - Akses internet ke `emailnator.com` (bot butuh koneksi ke situs)
 
