@@ -13,6 +13,9 @@ if (!config.botToken) {
 
 const bot = new TelegramBot(config.botToken, { polling: config.polling });
 
+// Kode terakhir yang terdeteksi per chat (dipakai tombol 📋 Copy Kode)
+const lastCodeByChat = new Map();
+
 /**
  * User storage (persisten, SQLite — lihat src/storage.js):
  *   { active: string, list: string[] }
@@ -46,18 +49,58 @@ function pushNewEmail(chatId, email) {
   store.setActive(chatId, email);
 }
 
-function escMD(text) {
+function escHTML(text) {
   if (!text) return '';
   return String(text)
-    .replace(/_/g, '\\_')
-    .replace(/\*/g, '\\*')
-    .replace(/`/g, '\\`')
-    .replace(/\[/g, '\\[');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function truncate(text, maxLen) {
-  if (!text || text.length <= maxLen) return escMD(text || '*(kosong)*');
-  return escMD(text.slice(0, maxLen)) + '\n\n...*(dipotong, terlalu panjang)*';
+  if (!text || text.length <= maxLen) return escHTML(text || '<i>(kosong)</i>');
+  return escHTML(text.slice(0, maxLen)) + '\n\n...<i>(dipotong, terlalu panjang)</i>';
+}
+
+/**
+ * Format waktu agar ringkas & konsisten.
+ * - Date valid → "01 Agu 2026, 14.05" (lokal)
+ * - Header mentah seperti "Fri, 1 Aug 2026 10:32:05 +0000" → ambil jam:menit
+ * - Kalau tidak bisa di-parse → potong aslinya
+ */
+function formatTime(t) {
+  if (!t) return '';
+  const s = String(t).trim();
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) {
+    const bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${dd} ${bulan[d.getMonth()]}, ${hh}:${mm}`;
+  }
+  const hm = s.match(/(\d{1,2}:\d{2}(?::\d{2})?)/);
+  if (hm) return hm[1];
+  return s.slice(0, 16);
+}
+
+/**
+ * Deteksi kode (OTP / verifikasi) di dalam isi pesan.
+ * - Prioritas 1: deretan 4-8 angka yang berdiri sendiri (mis. "123456")
+ * - Prioritas 2: token alfanumerik 5-12 karakter yang wajib berisi angka + huruf
+ * Mengembalikan kode (string) atau null kalau tidak ada.
+ */
+function detectCode(text) {
+  if (!text) return null;
+  const s = String(text);
+  const otp = s.match(/(?<![\dA-Za-z])(\d{4,8})(?![\dA-Za-z])/);
+  if (otp) return otp[1];
+  for (const tok of s.match(/[A-Za-z0-9]{5,12}/g) || []) {
+    if (/\d/.test(tok) && /[A-Za-z]/.test(tok)) return tok;
+  }
+  return null;
 }
 
 function buildInboxKeyboard(inbox) {
@@ -66,7 +109,8 @@ function buildInboxKeyboard(inbox) {
     const label = m.subject
       ? `${i + 1}. ${m.subject.slice(0, 40)}`
       : `${i + 1}. (no subject)`;
-    rows.push([{ text: `📖 ${label}`, callback_data: `read_${m.id}` }]);
+    const t = formatTime(m.time);
+    rows.push([{ text: `📖 ${label}${t ? ` — ${t}` : ''}`, callback_data: `read_${m.id}` }]);
   });
   rows.push([
     { text: '🔄 Refresh', callback_data: 'refresh_inbox' },
@@ -246,21 +290,32 @@ bot.on('callback_query', async (query) => {
     try {
       const e = new Emailnator();
       const message = await e.getMessage(email, messageId);
+      const code = detectCode(message.text);
+      if (code) lastCodeByChat.set(chatId, code);
+
       const content = truncate(message.text, config.messages.maxContentLength);
-      await bot.editMessageText(
+      const waktu = formatTime(message.time) || message.time || '?';
+      const header =
         `<b>📩 Pesan</b>\n` +
-          `Dari: ${escMD(message.from)}\n` +
-          `Subjek: ${escMD(message.subject)}\n` +
-          `Waktu: ${escMD(message.time || '?')}\n\n${content}`,
+        `Dari: ${escHTML(message.from)}\n` +
+        `Subjek: ${escHTML(message.subject)}\n` +
+        `Waktu: ${escHTML(waktu)}\n\n`;
+
+      const keyboard = [];
+      if (code) {
+        keyboard.push([
+          { text: `📋 Copy Kode: ${code.slice(0, 10)}`, callback_data: 'copy_code' },
+        ]);
+      }
+      keyboard.push([{ text: '⬅️ Kembali ke Inbox', callback_data: 'refresh_inbox' }]);
+
+      await bot.editMessageText(
+        `${header}${code ? `🔑 <b>Kode:</b> <code>${escHTML(code)}</code>\n\n` : ''}${content}`,
         {
           chat_id: chatId,
           message_id: status.message_id,
           parse_mode: 'HTML',
-          reply_markup: {
-            inline_keyboard: [
-              [{ text: '⬅️ Kembali ke Inbox', callback_data: 'refresh_inbox' }],
-            ],
-          },
+          reply_markup: { inline_keyboard: keyboard },
         }
       );
     } catch (err) {
@@ -269,6 +324,24 @@ bot.on('callback_query', async (query) => {
         message_id: status.message_id,
       });
     }
+    return;
+  }
+
+  // 📋 Copy kode (OTP/verifikasi)
+  if (data === 'copy_code') {
+    const code = lastCodeByChat.get(chatId);
+    if (!code) {
+      return bot.answerCallbackQuery(query.id, {
+        text: 'Kode tidak ditemukan — buka ulang pesannya ya',
+      });
+    }
+    await bot.answerCallbackQuery(query.id, { text: `Kode: ${code}` });
+    await bot.sendMessage(
+      chatId,
+      `📋 <b>Kode:</b>\n\n<code>${escHTML(code)}</code>\n\n` +
+        `👆 Tekan & tahan kode di atas, lalu pilih <b>Copy</b> untuk menyalin.`,
+      { parse_mode: 'HTML' }
+    );
     return;
   }
 
