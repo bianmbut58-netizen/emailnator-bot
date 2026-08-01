@@ -7,8 +7,8 @@
 
 const config = {
   // Token bot Telegram — dapat dari @BotFather
-  // Isi langsung di sini: botToken: '123456:ABCdef...'
-  botToken: '8773654941:AAHUC8XECJpo1J24YxNt9kACo6DMbMBa-VE',
+  // Isi langsung di sini, atau set env var TELEGRAM_BOT_TOKEN (dipakai untuk deploy di Railway)
+  botToken: process.env.TELEGRAM_BOT_TOKEN || '8522366804:AAHY_twlXpvhC4ifCjUVKD19yIdqsTvYydo',
 
   // Opsi polling Telegram (optional)
   polling: {

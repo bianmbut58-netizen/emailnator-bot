@@ -1,0 +1,3 @@
+# Python bridge deps — required by src/emailnator.py (Cloudflare bypass)
+# Install with: pip install -r requirements.txt
+cloudscraper>=1.0.0
